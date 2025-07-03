@@ -11,7 +11,7 @@ void get_URL( const string& host, const string& path )
 {
   cerr << "Function called: get_URL(" << host << ", " << path << ")\n";
   TCPSocket socket;
-  socket.connect( Address(host, "http") );
+  socket.connect( Address( host, "http" ) );
 
   socket.write( "GET " + path + " HTTP/1.1\r\n" );
   socket.write( "Host: " + host + "\r\n" );
@@ -19,7 +19,7 @@ void get_URL( const string& host, const string& path )
   socket.write( "\r\n" );
 
   string buf;
-  while (!socket.eof()) {
+  while ( !socket.eof() ) {
     socket.read( buf );
     cout << buf;
   }
