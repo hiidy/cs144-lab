@@ -9,16 +9,18 @@ void Reassembler::insert( uint64_t first_index, string data, bool is_last_substr
 {
   debug( "unimplemented insert({}, {}, {}) called", first_index, data, is_last_substring );
 
+  if (first_index == 0 && data == "a") {
+    std::cerr << "[DEBUG] insert called with a @ 0" << std::endl;
+  }
+
   uint64_t first_unpopped_index = 0;
   uint64_t first_unassembled_index = first_unpopped_index + output_.writer().bytes_pushed();
 
-  if (first_index + data.size() <= first_unassembled_index) {
-    if (is_last_substring) {
-      output_.writer().close();
-      return;
-    }
-    return;
+  if (is_last_substring) {
+    eof_seen_ = true;
+    eof_index_ = first_index + data.size();
   }
+
 
   uint64_t first_unacceptable_index = first_unassembled_index + output_.writer().available_capacity();
 
@@ -38,7 +40,7 @@ void Reassembler::insert( uint64_t first_index, string data, bool is_last_substr
   }
 
   //merge
-  for (auto it = unassembled_chunks_.begin(); it != unassembled_chunks_.end(); ++it) {
+  for (auto it = unassembled_chunks_.begin(); it != unassembled_chunks_.end();) {
     uint64_t chunk_idx = it->first;
     auto chunk_data = it->second;
     uint64_t chunk_end = chunk_idx + chunk_data.size();
@@ -54,13 +56,12 @@ void Reassembler::insert( uint64_t first_index, string data, bool is_last_substr
       data = chunk_data + data.substr( overlap );
       first_index = chunk_idx;
       it = unassembled_chunks_.erase( it );
-    }
-
-    if (first_index < chunk_end && chunk_idx <= data_end) {
-
-      size_t overlap = data_end - chunk_end;
+    } else if (first_index < chunk_end && chunk_idx <= data_end) {
+      size_t overlap = data_end - chunk_idx;
       data = data + chunk_data.substr( overlap );
       it = unassembled_chunks_.erase( it );
+    } else {
+      ++it;
     }
   }
 
@@ -77,12 +78,7 @@ void Reassembler::insert( uint64_t first_index, string data, bool is_last_substr
   }
 
 
-  if (is_last_substring) {
-    eof_seen_ = true;
-    eof_index_ = first_index + data.size();
-  }
-
-  if (eof_seen_ && first_unassembled_index == eof_index_) {
+  if (eof_seen_ && output_.writer().bytes_pushed() == eof_index_) {
     output_.writer().close();
   }
 }
