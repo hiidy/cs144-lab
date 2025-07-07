@@ -2,11 +2,21 @@
 
 #include "byte_stream.hh"
 
+#include <limits>
+#include <map>
+
 class Reassembler
 {
 public:
   // Construct Reassembler to write into given ByteStream.
-  explicit Reassembler( ByteStream&& output ) : output_( std::move( output ) ) {}
+  explicit Reassembler( ByteStream&& output )
+  : output_( std::move( output )),
+    next_idx_(0),
+    unassembled_chunks_(),
+    eof_seen_(false),
+    eof_index_( std::numeric_limits<uint64_t>::max() )
+  {}
+
 
   /*
    * Insert a new substring to be reassembled into a ByteStream.
@@ -43,4 +53,8 @@ public:
 
 private:
   ByteStream output_;
+  uint64_t next_idx_;
+  std::map<uint64_t, std::string> unassembled_chunks_;
+  bool eof_seen_;
+  uint64_t eof_index_ = std::numeric_limits<uint64_t>::max();
 };
