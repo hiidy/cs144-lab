@@ -10,13 +10,12 @@ class Reassembler
 public:
   // Construct Reassembler to write into given ByteStream.
   explicit Reassembler( ByteStream&& output )
-  : output_( std::move( output )),
-    next_idx_(0),
-    unassembled_chunks_(),
-    eof_seen_(false),
-    eof_index_( std::numeric_limits<uint64_t>::max() )
+    : output_( std::move( output ) )
+    , next_idx_( 0 )
+    , unassembled_chunks_()
+    , eof_seen_( false )
+    , eof_index_( std::numeric_limits<uint64_t>::max() )
   {}
-
 
   /*
    * Insert a new substring to be reassembled into a ByteStream.
