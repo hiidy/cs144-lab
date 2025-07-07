@@ -8,6 +8,10 @@ using namespace std;
 void Reassembler::insert( uint64_t first_index, string data, bool is_last_substring )
 {
   debug( "unimplemented insert({}, {}, {}) called", first_index, data, is_last_substring );
+  if (first_index == 2 && data == "c") {
+    std::cerr << "[DEBUG] insert called with a @ 0" << std::endl;
+  }
+
 
   uint64_t first_unpopped_index = 0;
   uint64_t first_unassembled_index = first_unpopped_index + output_.writer().bytes_pushed();
@@ -49,10 +53,14 @@ void Reassembler::insert( uint64_t first_index, string data, bool is_last_substr
 
     if (chunk_idx < first_index && chunk_end > first_index) {
       size_t overlap = chunk_end - first_index;
-      data = chunk_data + data.substr( overlap, chunk_data.size() - chunk_end );
+      if (chunk_end >= data_end) {
+        data = chunk_data;
+      } else {
+        data = chunk_data.substr( 0, chunk_data.size() - overlap ) + data;
+      }
       first_index = chunk_idx;
       it = unassembled_chunks_.erase( it );
-    } else if (first_index < chunk_idx && data_end > chunk_idx) {
+    } else if (data_end > chunk_idx && data_end < chunk_end) {
       size_t overlap = data_end - chunk_idx;
       data = data + chunk_data.substr( overlap );
       it = unassembled_chunks_.erase( it );
