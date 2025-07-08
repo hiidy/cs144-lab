@@ -14,7 +14,6 @@ Wrap32 Wrap32::wrap( uint64_t n, Wrap32 zero_point )
 
 uint64_t Wrap32::unwrap( Wrap32 zero_point, uint64_t checkpoint ) const
 {
-  debug( "unimplemented unwrap( {}, {} ) called", zero_point.raw_value_, checkpoint );
   uint32_t rel_seq = this->raw_value_ - zero_point.raw_value_;
   uint64_t base = checkpoint & ~((1ULL << 32) - 1);
   uint64_t first = base + rel_seq;
