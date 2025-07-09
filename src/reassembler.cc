@@ -12,7 +12,7 @@ void Reassembler::insert( uint64_t first_index, string data, bool is_last_substr
     std::cerr << "[DEBUG] insert called with a @ 0" << std::endl;
   }
 
-  uint64_t first_unassembled_index =  output_.writer().bytes_pushed();
+  uint64_t first_unassembled_index = output_.writer().bytes_pushed();
 
   if ( is_last_substring ) {
     eof_seen_ = true;
