@@ -7,6 +7,11 @@ void TCPReceiver::receive( TCPSenderMessage message )
 {
   debug( "unimplemented receive() called" );
 
+  if (message.RST) {
+    const_cast<Writer&>(reassembler_.writer()).set_error();
+    return;
+  }
+
   if ( message.SYN && !has_syn_ ) {
     isn_ = message.seqno;
     has_syn_ = true;
@@ -37,6 +42,10 @@ TCPReceiverMessage TCPReceiver::send() const
     }
     auto ackno = Wrap32::wrap( next_seq_num, isn_ );
     msg.ackno = ackno;
+  }
+
+  if ( writer().has_error()) {
+    msg.RST = true;
   }
   msg.window_size
     = static_cast<uint16_t>( min( writer().available_capacity(), static_cast<size_t>( UINT16_MAX ) ) );
