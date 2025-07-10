@@ -7,7 +7,6 @@ using namespace std;
 
 Wrap32 Wrap32::wrap( uint64_t n, Wrap32 zero_point )
 {
-  debug( "unimplemented wrap( {}, {} ) called", n, zero_point.raw_value_ );
   uint32_t result = zero_point.raw_value_ + static_cast<uint32_t>( n );
   return Wrap32( result );
 }

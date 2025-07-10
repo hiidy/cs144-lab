@@ -7,11 +7,6 @@ using namespace std;
 
 void Reassembler::insert( uint64_t first_index, string data, bool is_last_substring )
 {
-  debug( "unimplemented insert({}, {}, {}) called", first_index, data, is_last_substring );
-  if ( first_index == 2 && data == "c" ) {
-    std::cerr << "[DEBUG] insert called with a @ 0" << std::endl;
-  }
-
   uint64_t first_unassembled_index = output_.writer().bytes_pushed();
 
   if ( is_last_substring ) {
@@ -87,7 +82,6 @@ void Reassembler::insert( uint64_t first_index, string data, bool is_last_substr
 // This function is for testing only; don't add extra state to support it.
 uint64_t Reassembler::count_bytes_pending() const
 {
-  debug( "unimplemented count_bytes_pending() called" );
   uint64_t total = 0;
   for ( auto it : unassembled_chunks_ ) {
     total += it.second.size();

@@ -5,10 +5,8 @@ using namespace std;
 
 void TCPReceiver::receive( TCPSenderMessage message )
 {
-  debug( "unimplemented receive() called" );
-
-  if (message.RST) {
-    const_cast<Writer&>(reassembler_.writer()).set_error();
+  if ( message.RST ) {
+    const_cast<Writer&>( reassembler_.writer() ).set_error();
     return;
   }
 
@@ -33,7 +31,6 @@ void TCPReceiver::receive( TCPSenderMessage message )
 
 TCPReceiverMessage TCPReceiver::send() const
 {
-  debug( "unimplemented send() called" );
   TCPReceiverMessage msg;
   if ( has_syn_ ) {
     uint64_t next_seq_num = writer().bytes_pushed() + 1;
@@ -44,7 +41,7 @@ TCPReceiverMessage TCPReceiver::send() const
     msg.ackno = ackno;
   }
 
-  if ( writer().has_error()) {
+  if ( writer().has_error() ) {
     msg.RST = true;
   }
   msg.window_size
