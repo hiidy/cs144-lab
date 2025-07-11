@@ -44,6 +44,7 @@ private:
   uint64_t initial_RTO_ms_;
   uint16_t window_size_ = 1;
   bool sync_sent_ = false;
+  bool fin_sent_ = false;
   std::deque<TCPSenderMessage> outstanding_segments_;
   uint64_t next_seqno_ = 0;
   uint64_t last_acked_ = 0;

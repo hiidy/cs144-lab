@@ -34,6 +34,16 @@ void TCPSender::push( const TransmitFunction& transmit )
     return;
   }
 
+  if ( !fin_sent_ && next_seqno_ < last_acked_ + window_size_ && reader().is_finished() ) {
+    msg.FIN = true;
+    sync_sent_ = true;
+    msg.seqno = isn_;
+    next_seqno_++;
+    outstanding_segments_.push_back( msg );
+    transmit( msg );
+    return;
+  }
+
   if ( next_seqno_ < last_acked_ + window_size_ ) {
     string_view data = reader().peek();
     size_t window_remain = ( window_size_ + last_acked_ ) - next_seqno_;
@@ -43,14 +53,13 @@ void TCPSender::push( const TransmitFunction& transmit )
       return;
     }
 
-    if ( reader().is_finished() ) {
-      msg.FIN = true;
-      next_seqno_++;
-    }
-
     msg.payload = string( data.substr( 0, max_send ) );
     msg.seqno = Wrap32::wrap( next_seqno_, isn_ );
     reader().pop( msg.payload.size() );
+    if ( reader().is_finished() && next_seqno_ < last_acked_ + window_size_ ) {
+      msg.FIN = true;
+      next_seqno_ += 1;
+    }
     next_seqno_ += msg.payload.size();
     outstanding_segments_.push_back( msg );
     transmit( msg );
@@ -72,8 +81,12 @@ void TCPSender::receive( const TCPReceiverMessage& msg )
   if ( !msg.ackno.has_value() ) {
     return;
   }
-  last_acked_ = msg.ackno->unwrap( isn_, last_acked_ );
 
+  uint64_t rcv_last_acked_ = msg.ackno->unwrap( isn_, last_acked_ );
+  if ( rcv_last_acked_ < last_acked_ || rcv_last_acked_ > next_seqno_ ) {
+    return;
+  }
+  last_acked_ = rcv_last_acked_;
   while ( !outstanding_segments_.empty()
           && outstanding_segments_.front().seqno.unwrap( isn_, last_acked_ ) <= last_acked_ ) {
     outstanding_segments_.pop_front();
