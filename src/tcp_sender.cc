@@ -36,10 +36,10 @@ void TCPSender::push( const TransmitFunction& transmit )
 
   if ( !fin_sent_ && next_seqno_ < last_acked_ + window_size_ && reader().is_finished() ) {
     msg.FIN = true;
-    sync_sent_ = true;
-    msg.seqno = isn_;
-    next_seqno_++;
+    fin_sent_ = true;
     outstanding_segments_.push_back( msg );
+    msg.seqno = Wrap32::wrap( next_seqno_, isn_ );
+    next_seqno_++;
     transmit( msg );
     return;
   }
