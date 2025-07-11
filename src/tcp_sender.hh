@@ -9,9 +9,52 @@
 class TCPSender
 {
 public:
+  class Timer
+  {
+  public:
+    Timer( uint64_t initial_timeout ) : RTO_timeout_( initial_timeout ), time_elapsed_( 0 ), running_( false ) {}
+
+    void start()
+    {
+      running_ = true;
+      time_elapsed_ = 0;
+    }
+
+    void stop() { running_ = false; }
+
+    void restart()
+    {
+      time_elapsed_ = 0;
+      running_ = true;
+    }
+
+    void tick( uint64_t time )
+    {
+      if ( running_ ) {
+        time_elapsed_ += time;
+      }
+    }
+
+    bool running() { return running_; }
+
+    bool expired() { return running_ && RTO_timeout_ <= time_elapsed_; }
+
+    void double_timeout() { RTO_timeout_ = RTO_timeout_ * 2; }
+
+    void reset_timeout( uint64_t new_timeout ) { RTO_timeout_ = new_timeout; }
+
+  private:
+    uint64_t RTO_timeout_;
+    uint64_t time_elapsed_;
+    bool running_;
+  };
   /* Construct TCP sender with given default Retransmission Timeout and possible ISN */
   TCPSender( ByteStream&& input, Wrap32 isn, uint64_t initial_RTO_ms )
-    : input_( std::move( input ) ), isn_( isn ), initial_RTO_ms_( initial_RTO_ms ), outstanding_segments_()
+    : input_( std::move( input ) )
+    , isn_( isn )
+    , initial_RTO_ms_( initial_RTO_ms )
+    , outstanding_segments_()
+    , timer_( initial_RTO_ms )
   {}
 
   /* Generate an empty TCPSenderMessage */
@@ -48,4 +91,6 @@ private:
   std::deque<TCPSenderMessage> outstanding_segments_;
   uint64_t next_seqno_ = 0;
   uint64_t last_acked_ = 0;
+  Timer timer_;
+  uint64_t consecutive_retransmissions_ = 0;
 };

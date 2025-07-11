@@ -7,20 +7,17 @@ using namespace std;
 // This function is for testing only; don't add extra state to support it.
 uint64_t TCPSender::sequence_numbers_in_flight() const
 {
-  debug( "unimplemented sequence_numbers_in_flight() called" );
   return next_seqno_ - last_acked_;
 }
 
 // This function is for testing only; don't add extra state to support it.
 uint64_t TCPSender::consecutive_retransmissions() const
 {
-  debug( "unimplemented consecutive_retransmissions() called" );
-  return {};
+  return consecutive_retransmissions_;
 }
 
 void TCPSender::push( const TransmitFunction& transmit )
 {
-  debug( "unimplemented push() called" );
   TCPSenderMessage msg;
   string payload;
   if ( !sync_sent_ ) {
@@ -29,7 +26,17 @@ void TCPSender::push( const TransmitFunction& transmit )
     msg.seqno = isn_;
     msg.payload = payload;
     next_seqno_++;
+
+    if ( reader().is_finished() && !fin_sent_ && next_seqno_ < last_acked_ + window_size_ ) {
+      msg.FIN = true;
+      fin_sent_ = true;
+      next_seqno_ += 1;
+    }
+
     outstanding_segments_.push_back( msg );
+    if ( msg.sequence_length() != 0 && !timer_.running() ) {
+      timer_.start();
+    }
     transmit( msg );
     return;
   }
@@ -37,9 +44,12 @@ void TCPSender::push( const TransmitFunction& transmit )
   if ( !fin_sent_ && next_seqno_ < last_acked_ + window_size_ && reader().is_finished() ) {
     msg.FIN = true;
     fin_sent_ = true;
-    outstanding_segments_.push_back( msg );
     msg.seqno = Wrap32::wrap( next_seqno_, isn_ );
-    next_seqno_++;
+    next_seqno_ += 1;
+    outstanding_segments_.push_back( msg );
+    if ( msg.sequence_length() != 0 && !timer_.running() ) {
+      timer_.start();
+    }
     transmit( msg );
     return;
   }
@@ -62,13 +72,15 @@ void TCPSender::push( const TransmitFunction& transmit )
     }
     next_seqno_ += msg.payload.size();
     outstanding_segments_.push_back( msg );
+    if ( msg.sequence_length() != 0 && !timer_.running() ) {
+      timer_.start();
+    }
     transmit( msg );
   }
 }
 
 TCPSenderMessage TCPSender::make_empty_message() const
 {
-  debug( "unimplemented make_empty_message() called" );
   TCPSenderMessage msg;
   msg.seqno = Wrap32::wrap( next_seqno_, isn_ );
   return msg;
@@ -76,7 +88,6 @@ TCPSenderMessage TCPSender::make_empty_message() const
 
 void TCPSender::receive( const TCPReceiverMessage& msg )
 {
-  debug( "unimplemented receive() called" );
   window_size_ = msg.window_size;
   if ( !msg.ackno.has_value() ) {
     return;
@@ -86,15 +97,52 @@ void TCPSender::receive( const TCPReceiverMessage& msg )
   if ( rcv_last_acked_ < last_acked_ || rcv_last_acked_ > next_seqno_ ) {
     return;
   }
+
+  if ( rcv_last_acked_ > last_acked_ ) {
+    timer_.reset_timeout( initial_RTO_ms_ );
+    if ( !outstanding_segments_.empty() ) {
+      timer_.restart();
+    } else {
+      timer_.stop();
+    }
+    consecutive_retransmissions_ = 0;
+  }
+
   last_acked_ = rcv_last_acked_;
-  while ( !outstanding_segments_.empty()
-          && outstanding_segments_.front().seqno.unwrap( isn_, last_acked_ ) <= last_acked_ ) {
-    outstanding_segments_.pop_front();
+  while ( !outstanding_segments_.empty() ) {
+    const auto& seg = outstanding_segments_.front();
+    uint64_t seg_start = seg.seqno.unwrap( isn_, last_acked_ );
+    uint64_t seg_end = seg_start + seg.sequence_length();
+
+    if ( last_acked_ >= seg_end ) {
+      outstanding_segments_.pop_front();
+    } else {
+      break;
+    }
+  }
+
+  if ( outstanding_segments_.empty() ) {
+    timer_.stop();
   }
 }
 
 void TCPSender::tick( uint64_t ms_since_last_tick, const TransmitFunction& transmit )
 {
-  debug( "unimplemented tick({}, ...) called", ms_since_last_tick );
-  (void)transmit;
+  if ( outstanding_segments_.empty() && !timer_.running() )
+    return;
+
+  timer_.tick( ms_since_last_tick );
+
+  if ( timer_.expired() ) {
+    if ( !outstanding_segments_.empty() ) {
+      const auto& msg = outstanding_segments_.front();
+      transmit( msg );
+
+      if ( window_size_ > 0 ) {
+        consecutive_retransmissions_++;
+        timer_.double_timeout();
+      }
+      timer_.start();
+    }
+  }
 }
