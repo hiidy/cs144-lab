@@ -21,6 +21,10 @@ void TCPSender::push( const TransmitFunction& transmit )
   TCPSenderMessage msg;
   uint16_t window_size;
   string payload;
+  if ( reader().has_error() ) {
+    msg.RST = true;
+  }
+
   if ( window_size_ == 0 ) {
     window_size = 1;
   } else {
@@ -90,12 +94,18 @@ void TCPSender::push( const TransmitFunction& transmit )
 TCPSenderMessage TCPSender::make_empty_message() const
 {
   TCPSenderMessage msg;
+  if ( reader().has_error() ) {
+    msg.RST = true;
+  }
   msg.seqno = Wrap32::wrap( next_seqno_, isn_ );
   return msg;
 }
 
 void TCPSender::receive( const TCPReceiverMessage& msg )
 {
+  if ( msg.RST ) {
+    writer().set_error();
+  }
   window_size_ = msg.window_size;
   if ( !msg.ackno.has_value() ) {
     return;
