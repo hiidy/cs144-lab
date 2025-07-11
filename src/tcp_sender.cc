@@ -19,7 +19,14 @@ uint64_t TCPSender::consecutive_retransmissions() const
 void TCPSender::push( const TransmitFunction& transmit )
 {
   TCPSenderMessage msg;
+  uint16_t window_size;
   string payload;
+  if ( window_size_ == 0 ) {
+    window_size = 1;
+  } else {
+    window_size = window_size_;
+  }
+
   if ( !sync_sent_ ) {
     msg.SYN = true;
     sync_sent_ = true;
@@ -27,7 +34,7 @@ void TCPSender::push( const TransmitFunction& transmit )
     msg.payload = payload;
     next_seqno_++;
 
-    if ( reader().is_finished() && !fin_sent_ && next_seqno_ < last_acked_ + window_size_ ) {
+    if ( reader().is_finished() && !fin_sent_ && next_seqno_ < last_acked_ + window_size ) {
       msg.FIN = true;
       fin_sent_ = true;
       next_seqno_ += 1;
@@ -41,7 +48,7 @@ void TCPSender::push( const TransmitFunction& transmit )
     return;
   }
 
-  if ( !fin_sent_ && next_seqno_ < last_acked_ + window_size_ && reader().is_finished() ) {
+  if ( !fin_sent_ && next_seqno_ < last_acked_ + window_size && reader().is_finished() ) {
     msg.FIN = true;
     fin_sent_ = true;
     msg.seqno = Wrap32::wrap( next_seqno_, isn_ );
@@ -54,9 +61,9 @@ void TCPSender::push( const TransmitFunction& transmit )
     return;
   }
 
-  if ( next_seqno_ < last_acked_ + window_size_ ) {
+  while ( next_seqno_ < last_acked_ + window_size ) {
     string_view data = reader().peek();
-    size_t window_remain = ( window_size_ + last_acked_ ) - next_seqno_;
+    size_t window_remain = ( window_size + last_acked_ ) - next_seqno_;
     size_t max_send = min( min( data.size(), window_remain ), TCPConfig::MAX_PAYLOAD_SIZE );
 
     if ( max_send == 0 ) {
@@ -66,11 +73,12 @@ void TCPSender::push( const TransmitFunction& transmit )
     msg.payload = string( data.substr( 0, max_send ) );
     msg.seqno = Wrap32::wrap( next_seqno_, isn_ );
     reader().pop( msg.payload.size() );
-    if ( reader().is_finished() && next_seqno_ < last_acked_ + window_size_ ) {
+    next_seqno_ += msg.payload.size();
+    if ( reader().is_finished() && next_seqno_ < last_acked_ + window_size ) {
       msg.FIN = true;
+      fin_sent_ = true;
       next_seqno_ += 1;
     }
-    next_seqno_ += msg.payload.size();
     outstanding_segments_.push_back( msg );
     if ( msg.sequence_length() != 0 && !timer_.running() ) {
       timer_.start();
@@ -102,8 +110,6 @@ void TCPSender::receive( const TCPReceiverMessage& msg )
     timer_.reset_timeout( initial_RTO_ms_ );
     if ( !outstanding_segments_.empty() ) {
       timer_.restart();
-    } else {
-      timer_.stop();
     }
     consecutive_retransmissions_ = 0;
   }
