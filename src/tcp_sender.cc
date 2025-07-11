@@ -37,13 +37,14 @@ void TCPSender::push( const TransmitFunction& transmit )
     msg.seqno = isn_;
     msg.payload = payload;
 
-    size_t window_remain = (last_acked_ + window_size) - next_seqno_;
+    size_t window_remain = ( last_acked_ + window_size ) - next_seqno_;
     string_view data = reader().peek();
-    size_t max_payload = min({data.size(), window_remain > 0 ? window_remain - 1 : 0, TCPConfig::MAX_PAYLOAD_SIZE});
+    size_t max_payload
+      = min( { data.size(), window_remain > 0 ? window_remain - 1 : 0, TCPConfig::MAX_PAYLOAD_SIZE } );
 
-    if (max_payload > 0) {
-      msg.payload = string(data.substr(0, max_payload));
-      reader().pop(max_payload);
+    if ( max_payload > 0 ) {
+      msg.payload = string( data.substr( 0, max_payload ) );
+      reader().pop( max_payload );
     }
 
     if ( reader().is_finished() && !fin_sent_ && next_seqno_ < last_acked_ + window_size ) {
