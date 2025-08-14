@@ -11,14 +11,14 @@
 
 ## Lab sequence
 
-* **Lab 0**: [networking warmup](docs/checkpoint0.pdf)
-* **Lab 1**: [stitching substrings into a byte stream](docs/checkpoint1.pdf)
-* **Lab 2**: [TCP receiver](docs/checkpoint2.pdf)
-* **Lab 3**: [TCP sender](docs/checkpoint3.pdf)
-* **Lab 4**: [measuring the real world](docs/checkpoint4.pdf)
-* **Lab 5**: [down the stack (the network interface)](docs/checkpoint5.pdf)
-* **Lab 6**: [building an IP router](docs/checkpoint6.pdf)
-* **Lab 7**: [putting it all together](docs/checkpoint7.pdf)
+* **Lab 0**: [networking warmup](docs/check0.pdf)
+* **Lab 1**: [stitching substrings into a byte stream](docs/check1.pdf)
+* **Lab 2**: [TCP receiver](docs/check2.pdf)
+* **Lab 3**: [TCP sender](docs/check3.pdf)
+* **Lab 4**: [measuring the real world](docs/check4.pdf)
+* **Lab 5**: [down the stack (the network interface)](docs/check5.pdf)
+* **Lab 6**: [building an IP router](docs/check6.pdf)
+* **Lab 7**: [putting it all together](docs/check7.pdf)
 
 ## Set up the build system
 
